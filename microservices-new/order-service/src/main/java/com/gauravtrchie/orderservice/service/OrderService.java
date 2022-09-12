@@ -1,5 +1,6 @@
 package com.gauravtrchie.orderservice.service;
 
+import com.gauravtrchie.orderservice.dto.InventoryResponse;
 import com.gauravtrchie.orderservice.dto.OrderLineItemsDto;
 import com.gauravtrchie.orderservice.dto.OrderRequest;
 import com.gauravtrchie.orderservice.model.Order;
@@ -8,7 +9,9 @@ import com.gauravtrchie.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -20,6 +23,7 @@ public class OrderService {
 
 
     private final OrderRepository orderRepository;
+    private final WebClient webClient;
 //requiredconstructor from lombok has been all the constructors to which we create manually
 //    public OrderService(OrderRepository orderRepository) {
 //        this.orderRepository = orderRepository;
@@ -38,7 +42,31 @@ public class OrderService {
 
         order.setOrderLineItemsList(orderLineItems);
 
-        orderRepository.save(order);
+        List<String> skuCodes = order.getOrderLineItemsList()
+                .stream()
+                .map(OrderLineItems::getSkuCode)
+                .collect(Collectors.toList());
+
+
+        //call inventory service and place order if product is in stock
+
+        InventoryResponse[] inventoryResponsArray = webClient.get()
+                .uri("http://localhost:8082/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skucode",skuCodes).build())
+                .retrieve()
+                .bodyToMono(InventoryResponse[].class)
+                .block();
+
+        boolean allProductsIsInStock = Arrays.stream(inventoryResponsArray)
+                .allMatch(InventoryResponse::isInStock);
+
+        if (allProductsIsInStock){
+            orderRepository.save(order);
+        }else {
+            throw new IllegalArgumentException("Product is not in stock,please try again later");
+        }
+
+//        orderRepository.save(order);
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
