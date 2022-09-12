@@ -1,7 +1,9 @@
 package com.gauravtrchie.productservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gauravtrchie.productservice.Repository.ProductRepository;
 import com.gauravtrchie.productservice.dto.ProductRequest;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,13 +28,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProductServiceApplicationTests {
 
 	@Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo : 4.4.2");
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:4.4.2");
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	@Autowired
+	private ProductRepository productRepository;
 
 
 	@DynamicPropertySource
@@ -50,6 +55,9 @@ class ProductServiceApplicationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(productRequestString))
 				.andExpect(status().isCreated());
+
+		Assertions.assertEquals(1, productRepository.findAll().size());
+
 	}
 
 
