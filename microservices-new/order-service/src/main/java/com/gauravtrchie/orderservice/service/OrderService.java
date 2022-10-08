@@ -23,7 +23,7 @@ public class OrderService {
 
 
     private final OrderRepository orderRepository;
-    private final WebClient webClient;
+    private final WebClient.Builder webClientBuilder;
 //requiredconstructor from lombok has been all the constructors to which we create manually
 //    public OrderService(OrderRepository orderRepository) {
 //        this.orderRepository = orderRepository;
@@ -50,17 +50,17 @@ public class OrderService {
 
         //call inventory service and place order if product is in stock
 
-        InventoryResponse[] inventoryResponsArray = webClient.get()
-                .uri("http://localhost:8082/api/inventory",
-                        uriBuilder -> uriBuilder.queryParam("skucode",skuCodes).build())
+        InventoryResponse[] inventoryResponsArray = webClientBuilder.build().get()
+                .uri("http://inventory-service/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCode",skuCodes).build())
                 .retrieve()
                 .bodyToMono(InventoryResponse[].class)
                 .block();
 
-        boolean allProductsIsInStock = Arrays.stream(inventoryResponsArray)
+        boolean allProductsInStock = Arrays.stream(inventoryResponsArray)
                 .allMatch(InventoryResponse::isInStock);
 
-        if (allProductsIsInStock){
+        if (allProductsInStock){
             orderRepository.save(order);
         }else {
             throw new IllegalArgumentException("Product is not in stock,please try again later");
